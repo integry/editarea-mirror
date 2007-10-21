@@ -2,7 +2,7 @@ editAreaLoader.load_syntax["js"] = {
 	'COMMENT_SINGLE' : {1 : '//'}
 	,'COMMENT_MULTI' : {'/*' : '*/'}
 	,'QUOTEMARKS' : {1: "'", 2: '"'}
-	,'KEYWORD_CASE_SENSITIVE' : true
+	,'KEYWORD_CASE_SENSITIVE' : false
 	,'KEYWORDS' : {
 		'statements' : [
 			'as', 'break', 'case', 'catch', 'continue', 'decodeURI', 'delete', 'do',

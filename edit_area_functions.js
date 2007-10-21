@@ -9,6 +9,24 @@
 		return EditArea.prototype.smartTab.arguments[2] + EditArea.prototype.smartTab.arguments[3] + val.substr(0, editArea.tab_nb_char - (EditArea.prototype.smartTab.arguments[3].length)%editArea.tab_nb_char);
 	};
 	
+	EditArea.prototype.show_waiting_screen= function(){
+		width= this.editor_area.offsetWidth;
+		height= this.editor_area.offsetHeight;
+		if(this.nav['isGecko'] || this.nav['isOpera'] || this.nav['isIE']>=7){
+			width-=2;
+			height-=2;
+		}
+		this.processing_screen.style.display="block";
+		this.processing_screen.style.width= width+"px";
+		this.processing_screen.style.height= height+"px";
+		this.waiting_screen_displayed= true;
+	};
+	
+	EditArea.prototype.hide_waiting_screen= function(){
+		this.processing_screen.style.display="none";
+		this.waiting_screen_displayed= false;
+	};
+	
 	EditArea.prototype.add_style= function(styles){
 		if(styles.length>0){
 			newcss = document.createElement("style");
@@ -249,7 +267,7 @@
 	};
 	
 	// the auto scroll of the textarea has some lacks when it have to show cursor in the visible area when the textarea size change
-	// show spécifiy whereas it is the "top" or "bottom" of the selection that is showned
+	// show specifiy whereas it is the "top" or "bottom" of the selection that is showned
 	EditArea.prototype.scroll_to_view= function(show){
 		if(!this.smooth_selection)
 			return;
@@ -275,39 +293,35 @@
 		var max_width_visible= zone.clientWidth + zone.scrollLeft;
 		var miss_left= cursor_pos_left + 10 - max_width_visible;
 		if(miss_left>0){			
-			zone.scrollLeft= zone.scrollLeft + miss_left+ 50;
+			zone.scrollLeft= zone.scrollLeft + miss_left + 50;
 		}else if( zone.scrollLeft > cursor_pos_left){
 			zone.scrollLeft= cursor_pos_left ;
 		}else if( zone.scrollLeft == 45){
 			// show the line numbers if textarea align to it's left
 			zone.scrollLeft=0;
 		}
-		/*if(miss_top> 0 || miss_left >0)
-			alert("miss top: "+miss_top+" miss left: "+miss_left);*/
 	};
 	
-	EditArea.prototype.check_undo= function(){
+	EditArea.prototype.check_undo= function(only_once){
 		if(!editAreas[this.id])
 			return false;
 		if(this.textareaFocused && editAreas[this.id]["displayed"]==true){
 			var text=this.textarea.value;
 			if(this.previous.length<=1)
 				this.switchClassSticky(document.getElementById("undo"), 'editAreaButtonDisabled', true);
-			/*var last= 0;
-			for( var i in this.previous){
-				last=i;
-			}*/
+		
 			if(!this.previous[this.previous.length-1] || this.previous[this.previous.length-1]["text"] != text){
 				this.previous.push({"text": text, "selStart": this.textarea.selectionStart, "selEnd": this.textarea.selectionEnd});
 				if(this.previous.length > this.settings["max_undo"]+1)
 					this.previous.shift();
 				
 			}
-			if(this.previous.length == 2)
-				this.switchClassSticky(document.getElementById("undo"), 'editAreaButtonNormal', false);
+			if(this.previous.length >= 2)
+				this.switchClassSticky(document.getElementById("undo"), 'editAreaButtonNormal', false);		
 		}
-			//if(this.previous[0] == text)	
-		setTimeout("editArea.check_undo()", 3000);
+
+		if(!only_once)
+			setTimeout("editArea.check_undo()", 3000);
 	};
 	
 	EditArea.prototype.undo= function(){
@@ -326,6 +340,7 @@
 			this.switchClassSticky(document.getElementById("redo"), 'editAreaButtonNormal', false);
 			this.resync_highlight(true);
 			//alert("undo"+this.previous.length);
+			this.check_file_changes();
 		}
 	};
 	
@@ -341,15 +356,20 @@
 			this.area_select(next["selStart"], next["selEnd"]-next["selStart"]);
 			this.switchClassSticky(document.getElementById("undo"), 'editAreaButtonNormal', false);
 			this.resync_highlight(true);
+			this.check_file_changes();
 		}
 		if(	this.next.length == 0)
 			this.switchClassSticky(document.getElementById("redo"), 'editAreaButtonDisabled', true);
 	};
 	
 	EditArea.prototype.check_redo= function(){
-		if(editArea.next.length > 0 && editArea.textarea.value!=editArea.last_undo){
+		if(editArea.next.length == 0 || editArea.textarea.value!=editArea.last_undo){
 			editArea.next= new Array();	// undo the ability to use "redo" button
 			editArea.switchClassSticky(document.getElementById("redo"), 'editAreaButtonDisabled', true);
+		}
+		else
+		{
+			this.switchClassSticky(document.getElementById("redo"), 'editAreaButtonNormal', false);
 		}
 	};
 	
@@ -398,28 +418,6 @@
 		if (element != null && (lockChanged || !element.classLock)) {
 			element.className = class_name;
 			element.oldClassName = class_name;
-	
-			// Fix opacity in Opera
-			if (this.nav['isOpera']) {
-				if (class_name == "mceButtonDisabled") {
-					var suffix = "";
-	
-					if (!element.mceOldSrc)
-						element.mceOldSrc = element.src;
-	
-					if (this.operaOpacityCounter > -1)
-						suffix = '?rnd=' + this.operaOpacityCounter++;
-	
-					element.src = this.baseURL + "/images/opacity.png" ;
-					element.style.backgroundImage = "url('" + element.mceOldSrc + "')";
-				} else {
-					if (element.mceOldSrc) {
-						element.src = element.mceOldSrc;
-						element.parentNode.style.backgroundImage = "";
-						element.mceOldSrc = null;
-					}
-				}
-			}
 		}
 	};
 	
@@ -644,5 +642,389 @@
 		}
 		this.resize_allowed= allow;
 	};
+	
+	
+	EditArea.prototype.change_syntax= function(new_syntax, is_waiting){
+	//	alert("cahnge to "+new_syntax);
+		// the syntax is the same
+		if(new_syntax==this.settings['syntax'])
+			return true;
+		
+		// check that the syntax is one allowed
+		var founded= false;
+		for(var i=0; i<this.syntax_list.length; i++)
+		{
+			if(this.syntax_list[i]==new_syntax)
+				founded= true;
+		}
+		
+		if(founded==true)
+		{
+			// the reg syntax file is not loaded
+			if(!parent.editAreaLoader.load_syntax[new_syntax])
+			{
+				// load the syntax file and wait for file loading
+				if(!is_waiting)
+					parent.editAreaLoader.load_script(parent.editAreaLoader.baseURL + "reg_syntax/" + new_syntax + ".js");
+				setTimeout("editArea.change_syntax('"+ new_syntax +"', true);", 100);
+				this.show_waiting_screen();
+			}
+			else
+			{
+				if(!this.allready_used_syntax[new_syntax])
+				{	// the syntax has still not been used
+					// rebuild syntax definition for new languages
+					parent.editAreaLoader.init_syntax_regexp();
+					// add style to the new list
+					this.add_style(parent.editAreaLoader.syntax[new_syntax]["styles"]);
+					this.allready_used_syntax[new_syntax]=true;
+				}
+				// be sure that the select option is correctly updated
+				var sel= document.getElementById("syntax_selection");
+				if(sel && sel.value!=new_syntax)
+				{
+					for(var i=0; i<sel.length; i++){
+						if(sel.options[i].value && sel.options[i].value == new_syntax)
+							sel.options[i].selected=true;
+					}
+				}
+				
+				this.settings['syntax']= new_syntax;
+				this.resync_highlight(true);
+				this.hide_waiting_screen();
+				return true;
+			}
+		}
+		return false;
+	};
+	
+	/***** tabbed files managing functions *****/
+	
+	// open a new tab for the given file
+	EditArea.prototype.open_file= function(settings){
+		
+		if(settings['id']!="undefined")
+		{
+			var id= settings['id'];
+			// create a new file object with defautl values
+			var new_file= new Object();
+			new_file['id']= id;
+			new_file['title']= id;
+			new_file['text']= "";
+			new_file['last_selection']= "";		
+			new_file['last_text_to_highlight']= "";
+			new_file['last_hightlighted_text']= "";
+			new_file['previous']= new Array();
+			new_file['next']= new Array();
+			new_file['last_undo']= "";
+			new_file['smooth_selection']= this.settings['smooth_selection'];
+			new_file['do_highlight']= this.settings['start_highlight'];
+			new_file['syntax']= this.settings['syntax'];
+			new_file['scroll_top']= 0;
+			new_file['scroll_left']= 0;
+			new_file['selection_start']= 0;
+			new_file['selection_end']= 0;
+			new_file['edited']= false;
+			new_file['font_size']= this.settings["font_size"];
+			new_file['font_family']= this.settings["font_family"];
+			new_file['toolbar']= {'links':{}, 'selects': {}};
+			new_file['compare_edited_text']= new_file['text'];
+			
+			
+			this.files[id]= new_file;
+			this.update_file(id, settings);
+			this.files[id]['compare_edited_text']= this.files[id]['text'];
+			
+			
+			var html_id= 'tab_file_'+encodeURIComponent(id);
+			this.filesIdAssoc[html_id]= id;
+			this.files[id]['html_id']= html_id;
+		
+			if(!document.getElementById(this.files[id]['html_id']) && id!="")
+			{
+				// be sure the tab browsing area is displayed
+				this.tab_browsing_area.style.display= "block";
+				var elem= document.createElement('li');
+				elem.id= this.files[id]['html_id'];
+				var close= "<img src=\""+ parent.editAreaLoader.baseURL +"images/close.gif\" title=\""+ this.get_translation('close_tab', 'word') +"\" onclick=\"editArea.execCommand('close_file', editArea.filesIdAssoc['"+ html_id +"']);return false;\" class=\"hidden\" onmouseover=\"this.className=''\" onmouseout=\"this.className='hidden'\" />";
+				elem.innerHTML= "<a onclick=\"javascript:editArea.execCommand('switch_to_file', editArea.filesIdAssoc['"+ html_id +"']);\" selec=\"none\"><b><span><strong class=\"edited\">*</strong>"+ this.files[id]['title'] + close +"</span></b></a>";
+				document.getElementById('tab_browsing_list').appendChild(elem);
+				var elem= document.createElement('text');
+				this.update_size();
+			}
+			
+			// open file callback (for plugin)
+			if(id!="")
+				this.execCommand('file_open', this.files[id]);
+			
+			this.switch_to_file(id, true);
+			return true;
+		}
+		else
+			return false;
+	};
+	
+	// close the given file
+	EditArea.prototype.close_file= function(id){
+		if(this.files[id])
+		{
+			this.save_file(id);
+			
+			// remove the tab in the toolbar
+			var li= document.getElementById(this.files[id]['html_id']);
+			li.parentNode.removeChild(li);
+			// select a new file
+			if(id== this.curr_file)
+			{
+				var next_file= "";
+				var is_next= false;
+				for(var i in this.files)
+				{
+					if(is_next)
+					{
+						next_file= i;
+						break;
+					}
+					else if(i==id)
+						is_next= true;
+					else
+						next_file= i;
+				}
+				// display the next file
+				this.switch_to_file(next_file);
+			}
+				
+			// close file callback
+			this.execCommand('file_close', this.files[id]);
+			
+			// clear datas
+			delete (this.files[id]);
+			this.update_size();
+		}
+		
+	};
+	
+	// backup current file datas
+	EditArea.prototype.save_file= function(id){
+		if(this.files[id])
+		{
+			var save= this.files[id];
+			save['last_selection']= this.last_selection;		
+			save['last_text_to_highlight']= this.last_text_to_highlight;
+			save['last_hightlighted_text']= this.last_hightlighted_text;
+			save['previous']= this.previous;
+			save['next']= this.next;
+			save['last_undo']= this.last_undo;
+			save['smooth_selection']= this.smooth_selection;
+			save['do_highlight']= this.do_highlight;
+			save['syntax']= this.settings['syntax'];
+			save['text']= this.textarea.value;
+			save['scroll_top']= this.result.scrollTop;
+			save['scroll_left']= this.result.scrollLeft;
+			save['selection_start']= this.last_selection["selectionStart"];
+			save['selection_end']= this.last_selection["selectionEnd"];
+			save['font_size']= this.settings["font_size"];
+			save['font_family']= this.settings["font_family"];
+			save['toolbar']= {'links':{}, 'selects': {}};
+			// save toolbar buttons state for fileSpecific buttons
+			var links= document.getElementById("toolbar_1").getElementsByTagName("a");
+			for(var i=0; i<links.length; i++)
+			{
+				if(links[i].getAttribute('fileSpecific')=='yes')
+				{
+					var save_butt= new Object();
+					var img= links[i].getElementsByTagName('img')[0];
+					save_butt['classLock']= img.classLock;
+					save_butt['className']= img.className;
+					save_butt['oldClassName']= img.oldClassName;
+					
+					save['toolbar']['links'][links[i].id]= save_butt;
+				}
+			}
+			// save toolbar select state for fileSpecific buttons
+			var selects= document.getElementById("toolbar_1").getElementsByTagName("select");
+			for(var i=0; i<selects.length; i++)
+			{
+				if(selects[i].getAttribute('fileSpecific')=='yes')
+				{
+					save['toolbar']['selects'][selects[i].id]= selects[i].value;
+				}
+			}
+				
+			this.files[id]= save;
+			
+			return save;
+		}
+		else
+			return false;
+	};
+	
+	// update file_datas
+	EditArea.prototype.update_file= function(id, new_values){
+		for(var i in new_values)
+		{
+			this.files[id][i]= new_values[i];
+		}
+	};
+	
+	// display file datas
+	EditArea.prototype.display_file= function(id){
+		// check if there is at least one tab file displayed
+		if(id=='')
+		{
+			this.textarea.readOnly= true;
+			this.tab_browsing_area.style.display= "none";
+			document.getElementById("no_file_selected").style.display= "block";
+			this.result.className= "empty";
+			if(!this.files[''])
+				this.open_file({id: ''});
+		}
+		else
+		{
+			this.result.className= "";
+			this.textarea.readOnly= false;
+			document.getElementById("no_file_selected").style.display= "none";
+			this.tab_browsing_area.style.display= "block";
+		}
+		
+		this.check_redo(true);
+		this.check_undo(true);
+		this.curr_file= id;
+		
+		// replace selected tab file
+		var lis= this.tab_browsing_area.getElementsByTagName('li');
+		for(var i=0; i<lis.length; i++)
+		{
+			if(lis[i].id == this.files[id]['html_id'])
+				lis[i].className='selected';
+			else
+				lis[i].className='';
+		}
+		
+		// replace next files datas
+		var new_file= this.files[id];
+	
+		// restore text content
+		this.textarea.value= new_file['text'];
+		
+		// restore font-size
+		this.set_font(new_file['font_family'], new_file['font_size']);
+		
+		// restore selection and scroll
+		this.area_select(new_file['last_selection']['selection_start'], new_file['last_selection']['selection_end'] - new_file['last_selection']['selection_start']);
+		this.manage_size(true);
+		this.result.scrollTop= new_file['scroll_top'];
+		this.result.scrollLeft= new_file['scroll_left'];
+		
+		// restore undo, redo
+		this.previous=	new_file['previous'];
+		this.next=	new_file['next'];
+		this.last_undo=	new_file['last_undo'];
+		this.check_redo(true);
+		this.check_undo(true);
+		
+		// restore highlight
+		this.execCommand("change_highlight", new_file['do_highlight']);
+		this.execCommand("change_syntax", new_file['syntax']);
+		
+		// smooth mode
+		this.execCommand("change_smooth_selection_mode", new_file['smooth_selection']);
+			
+		// restore links state in toolbar
+		var links= new_file['toolbar']['links'];
+		for(var i in links)
+		{
+			if(img= document.getElementById(i).getElementsByTagName('img')[0])
+			{
+				var save_butt= new Object();
+				img.classLock= links[i]['classLock'];
+				img.className= links[i]['className'];
+				img.oldClassName= links[i]['oldClassName'];
+			}
+		}
+		// restore select state in toolbar
+		var selects= new_file['toolbar']['selects'];
+		for(var i in selects)
+		{
+			var options= document.getElementById(i).options;
+			for(var j=0; j<options.length; j++)
+			{
+				if(options[j].value == selects[i])
+					document.getElementById(i).options[j].selected=true;
+			}
+		}
+	
+	};
 
+	// change tab for displaying a new one
+	EditArea.prototype.switch_to_file= function(file_to_show, force_refresh){
+		if(file_to_show!=this.curr_file || force_refresh)
+		{
+			this.save_file(this.curr_file);
+			if(this.curr_file!='')
+				this.execCommand('file_switch_off', this.files[this.curr_file]);
+			this.display_file(file_to_show);
+			if(file_to_show!='')
+				this.execCommand('file_switch_on', this.files[file_to_show]);
+		}
+	};
 
+	// get all infos for the given file
+	EditArea.prototype.get_file= function(id){
+		if(id==this.curr_file)
+			this.save_file(id);
+		return this.files[id];
+	};
+	
+	// get all available files infos
+	EditArea.prototype.get_all_files= function(){
+		tmp_files= this.files;
+		this.save_file(this.curr_file);
+		if(tmp_files[''])
+			delete(this.files['']);
+		return tmp_files;
+	};
+	
+	
+	// check if the file has changed
+	EditArea.prototype.check_file_changes= function(){
+	
+		var id= this.curr_file;
+		if(this.files[id] && this.files[id]['compare_edited_text']!=undefined)
+		{
+			if(this.files[id]['compare_edited_text'].length==this.textarea.value.length && this.files[id]['compare_edited_text']==this.textarea.value)
+			{
+				if(this.files[id]['edited']!= false)
+					this.set_file_edited_mode(id, false);
+			}
+			else
+			{
+				if(this.files[id]['edited']!= true)
+					this.set_file_edited_mode(id, true);
+			}
+		}
+	};
+	
+	// set if the file is edited or not
+	EditArea.prototype.set_file_edited_mode= function(id, to){
+		// change CSS for edited tab
+		if(this.files[id] && document.getElementById(this.files[id]['html_id']))
+		{
+			var link= document.getElementById(this.files[id]['html_id']).getElementsByTagName('a')[0];
+			if(to==true)
+			{
+				link.className= 'edited';
+			}
+			else
+			{
+				link.className= '';
+				if(id==this.curr_file)
+					text= this.textarea.value;
+				else
+					text= this.files[id]['text'];
+				this.files[id]['compare_edited_text']= text;
+			}
+				
+			this.files[id]['edited']= to;
+		}
+	};

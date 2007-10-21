@@ -20,11 +20,16 @@
 		this.last_selection=new Object();		
 		this.last_text_to_highlight="";
 		this.last_hightlighted_text= "";
+		this.syntax_list= new Array();
+		this.allready_used_syntax= new Object();
 		
 		this.textareaFocused= false;
 		this.previous= new Array();
 		this.next= new Array();
 		this.last_undo="";
+		this.files= new Object();
+		this.filesIdAssoc= new Object();
+		this.curr_file= '';
 		//this.loaded= false;
 		this.assocBracket=new Object();
 		this.revertAssocBracket= new Object();		
@@ -35,6 +40,9 @@
 		for(var index in this.assocBracket){
 			this.revertAssocBracket[this.assocBracket[index]]=index;
 		}
+		
+		
+		
 		/*this.textarea="";	
 		
 		this.state="declare";
@@ -63,8 +71,16 @@
 			this.tabulation="";
 			for(var i=0; i<this.tab_nb_char; i++)
 				this.tabulation+=" ";
-		}else
+		}else{
 			this.tabulation="\t";
+		}
+			
+		// retrieve the init parameter for syntax
+		if(this.settings["syntax_selection_allow"] && this.settings["syntax_selection_allow"].length>0)
+			this.syntax_list= this.settings["syntax_selection_allow"].replace(/ /g,"").split(",");
+		
+		if(this.settings['syntax'])
+			this.allready_used_syntax[this.settings['syntax']]=true;
 	};
 	
 	
@@ -76,6 +92,13 @@
 				parent.document.getElementById("frame_"+editArea.id).style.width= parent.document.getElementsByTagName("html")[0].clientWidth + "px";
 				parent.document.getElementById("frame_"+editArea.id).style.height= parent.document.getElementsByTagName("html")[0].clientHeight + "px";
 			}
+		
+			if(editArea.tab_browsing_area.style.display=='block' && !editArea.nav['isIE'])
+			{
+				editArea.tab_browsing_area.style.height= "0px";
+				editArea.tab_browsing_area.style.height= (editArea.result.offsetTop - editArea.tab_browsing_area.offsetTop -1)+"px";
+			}
+			
 			var height= document.body.offsetHeight - editArea.get_all_toolbar_height() - 4;
 			editArea.result.style.height= height +"px";
 			
@@ -102,7 +125,23 @@
 		this.result= document.getElementById("result");
 		this.content_highlight= document.getElementById("content_highlight");
 		this.selection_field= document.getElementById("selection_field");
+		this.processing_screen= document.getElementById("processing");
+		this.editor_area= document.getElementById("editor");
+		this.tab_browsing_area= document.getElementById("tab_browsing_area");
 		
+		if(syntax_selec= document.getElementById("syntax_selection"))
+		{
+			// set up syntax selection lsit in the toolbar
+			for(var i=0; i<this.syntax_list.length; i++) {
+				var syntax= this.syntax_list[i];
+				var option= document.createElement("option");
+				option.value= syntax;
+				if(syntax==this.settings['syntax'])
+					option.selected= "selected";
+				option.innerHTML= this.get_translation("syntax_" + syntax, "word");
+				syntax_selec.appendChild(option);
+			}
+		}
 		
 		// add plugins buttons in the toolbar
 		spans= parent.getChildren(document.getElementById("toolbar_1"), "span", "", "", "all", -1);
@@ -115,7 +154,7 @@
 					if(typeof(this.plugins[j].get_control_html)=="function" ){
 						html=this.plugins[j].get_control_html(id);
 						if(html!=false){
-							html= parent.editAreaLoader.translate(html, this.settings["language"], "template");
+							html= this.get_translation(html, "template");
 							var new_span= document.createElement("span");
 							new_span.innerHTML= html;				
 							var father= spans[i].parentNode;
@@ -192,24 +231,39 @@
 		}
 		
 		if(this.nav['isOpera']){
-			document.getElementById("editor").style.position= "absolute";
-			document.getElementById("selection_field").style.marginTop= "-1pt";			
-			document.getElementById("selection_field").style.paddingTop= "1pt";
+			this.editor_area.style.position= "absolute";
+			this.selection_field.style.marginTop= "-1pt";			
+			this.selection_field.style.paddingTop= "1pt";
 			document.getElementById("cursor_pos").style.marginTop= "-1pt";
 			document.getElementById("end_bracket").style.marginTop= "-1pt";
-			document.getElementById("content_highlight").style.marginTop= "-1pt";
+			this.content_highlight.style.marginTop= "-1pt";
 			/*document.getElementById("end_bracket").style.marginTop="1px";*/
+		}
+		
+		if(this.nav['isSafari']){
+			this.editor_area.style.position= "absolute";
+			this.selection_field.style.marginTop= "-1pt";			
+			this.selection_field.style.paddingTop= "1pt";
+			this.selection_field.style.marginLeft= "3px";			
+			this.content_highlight.style.marginTop= "-1pt";
+			this.content_highlight.style.marginLeft= "3px";
+			document.getElementById("cursor_pos").style.marginLeft= "3px";	
+			document.getElementById("end_bracket").style.marginLeft= "3px";	
+			
 		}
 		
 		// si le textarea n'est pas grand, un click sous le textarea doit provoquer un focus sur le textarea
 		parent.editAreaLoader.add_event(this.result, "click", function(e){ if((e.target || e.srcElement)==editArea.result) { editArea.area_select(editArea.textarea.value.length, 0);}  });
 		
-		setTimeout("editArea.manage_size();editArea.execCommand('EA_load');", 10);		
+		if(this.settings['is_multi_files']!=false)
+			this.open_file({'id': this.curr_file, 'text': ''});
+	
+		
+		setTimeout("editArea.focus();editArea.manage_size();editArea.execCommand('EA_load');", 10);		
 		//start checkup routine
 		this.check_undo();
 		this.check_line_selection(true);
 		this.scroll_to_view();
-		
 		
 		for(var i in this.plugins){
 			if(typeof(this.plugins[i].onload)=="function")
@@ -217,7 +271,7 @@
 		}
 		if(this.settings['fullscreen']==true)
 			this.toggle_full_screen(true);
-		
+	
 		parent.editAreaLoader.add_event(window, "resize", editArea.update_size);
 		parent.editAreaLoader.add_event(parent.window, "resize", editArea.update_size);
 		parent.editAreaLoader.add_event(top.window, "resize", editArea.update_size);
@@ -227,30 +281,66 @@
 		alert(date.getTime()- parent.editAreaLoader.start_time);*/
 	};
 	
-	EditArea.prototype.manage_size= function(){
+	
+	EditArea.prototype.manage_size= function(onlyOneTime){
 		if(!editAreas[this.id])
 			return false;
-		if(editAreas[this.id]["displayed"]==true)
+		if(editAreas[this.id]["displayed"]==true && this.textareaFocused)
 		{
 			var resized= false;
-			area_width= this.textarea.scrollWidth;
-			area_height= this.textarea.scrollHeight;
+			
+			//1) Manage display width
+			//1.1) Calc the new width to use for display
+			var area_width= this.textarea.scrollWidth;
+			var area_height= this.textarea.scrollHeight;
 			if(this.nav['isOpera']){
 				area_height= this.last_selection['nb_line']*this.lineHeight;
-				//area_width-=45;
-				area_width=10000; /* TODO: find a better way to fix the width problem */
-				//elem= document.getElementById("container");
-				//elem= this.textarea;
-				//window.status="area over: area_width "+area_width+" scroll: "+elem.scrollWidth+" offset: "+elem.offsetWidth +" client: "+ elem.clientWidth+" style: "+elem.style.width;
-				//window.status+=" area_height "+area_height+" scroll: "+elem.scrollHeight+" offset: "+elem.offsetHeight +" client: "+ elem.clientHeight;				
+				area_width=10000; /* TODO: find a better way to fix the width problem */								
 			}
 			
-			if(this.nav['isIE']==7)
+			if(this.nav['isIE']>=7)
 				area_width-=45;
 	
 			if(this.nav['isGecko'] && this.smooth_selection && this.last_selection["nb_line"])
 				area_height= this.last_selection["nb_line"]*this.lineHeight;
-				
+			
+			//1.2) the width is not the same, we must resize elements
+			if(this.textarea.previous_scrollWidth!=area_width)
+			{	
+				if(!this.nav['isOpera'] && this.textarea.style.width && (this.textarea.style.width.replace("px","") < area_width))
+					area_width+=50;
+			
+				if(this.nav['isGecko'] || this.nav['isOpera'])
+					this.container.style.width= (area_width+45)+"px";
+				else
+					this.container.style.width= area_width+"px";
+				this.textarea.style.width= area_width+"px";
+				this.content_highlight.style.width= area_width+"px";	
+				this.textarea.previous_scrollWidth=area_width;
+				resized=true;
+			}	
+			
+			
+			//2) Manage display height
+			//2.1) Calc the new height to use for display
+			var area_height = this.textarea.scrollHeight;
+			if(this.nav['isOpera']){
+				area_height= this.last_selection['nb_line']*this.lineHeight;
+			}
+			
+			if(this.nav['isGecko'] && this.smooth_selection && this.last_selection["nb_line"])
+				area_height= this.last_selection["nb_line"]*this.lineHeight;
+			//2.2) the width is not the same, we must resize elements 
+			if(this.textarea.previous_scrollHeight!=area_height)	
+			{	
+				this.container.style.height= (area_height+2)+"px";
+				this.textarea.style.height= area_height+"px";
+				this.content_highlight.style.height= area_height+"px";	
+				this.textarea.previous_scrollHeight= area_height;
+				resized=true;
+			}
+		
+			//3) if there is new lines, we add new line numbers in the line numeration area
 			if(this.last_selection["nb_line"] >= this.line_number)
 			{
 				var div_line_number="";
@@ -262,51 +352,19 @@
 				var span= document.createElement("span");
 				if(this.nav['isIE'])
 					span.unselectable=true;
-				span.innerHTML=div_line_number;					
-				document.getElementById("line_number").appendChild(span);				
+				span.innerHTML=div_line_number;         
+				document.getElementById("line_number").appendChild(span);       
 			}
-			//alert(area_height);
-				
-			if(this.textarea.previous_scrollWidth!=area_width)
-			{	// need width resizing
-				if(this.nav['isOpera']){
-					/*if(this.textarea.style.width.replace("px","")-0+50 < area_width)
-						area_width+=50;*/
-				}else{
-					if(this.textarea.style.width && (this.textarea.style.width.replace("px","") < area_width)){
-						area_width+=50;
-					}
-				}
-				//window.status= "width: "+this.textarea.offsetWidth+" scroll-width: "+this.textarea.scrollWidth+" area_width: "+area_width+" container: "+this.container.offsetWidth+" result: "+this.result.offsetWidth;
 		
-				if(this.nav['isGecko'] || this.nav['isOpera'])
-					this.container.style.width= (area_width+45)+"px";
-				else
-					this.container.style.width= area_width+"px";
-				this.textarea.style.width= area_width+"px";
-				this.content_highlight.style.width= area_width+"px";	
-				this.textarea.previous_scrollWidth=area_width;
-				resized=true;
-			}		
-			if(this.textarea.previous_scrollHeight!=area_height)	
-			{	// need height resizing
-				/*container_height=area_height;
-				if(document.getElementById("container").style.height.replace("px", "")<=area_height)
-					container_height+=100;*/
-				this.container.style.height= (area_height+2)+"px";
-				this.textarea.style.height= area_height+"px";
-				this.content_highlight.style.height= area_height+"px";	
-				this.textarea.previous_scrollHeight=area_height;
-				//alert(area_height);
-				resized=true;
-			}
+			//4) be sure the text is well displayed
 			this.textarea.scrollTop="0px";
 			this.textarea.scrollLeft="0px";
 			if(resized==true){
 				this.scroll_to_view();
 			}
 		}
-		setTimeout("editArea.manage_size();", 100);
+		if(!onlyOneTime)
+			setTimeout("editArea.manage_size();", 100);
 	};
 	
 	EditArea.prototype.add_event = function(obj, name, handler) {
@@ -357,10 +415,27 @@
 			case "re_sync":
 				if(!this.do_highlight)
 					break;
+			case "file_switch_on":
+				if(this.settings["EA_file_switch_on_callback"].length>0)
+					eval("parent."+this.settings["EA_file_switch_on_callback"]+"(param);");
+				break;
+			case "file_switch_off":
+				if(this.settings["EA_file_switch_off_callback"].length>0)
+					eval("parent."+this.settings["EA_file_switch_off_callback"]+"(param);");
+				break;
+			case "file_close":
+				if(this.settings["EA_file_close_callback"].length>0)
+					eval("parent."+this.settings["EA_file_close_callback"]+"(param);");
+				break;
+			
 			default:
-				//alert(cmd+"\n"+params);
 				if(typeof(eval("editArea."+cmd))=="function")
-					try{eval("editArea."+ cmd +"(param);");}catch(e){};	
+				{
+					if(this.settings["debug"])
+						eval("editArea."+ cmd +"(param);");
+					else
+						try{eval("editArea."+ cmd +"(param);");}catch(e){};
+				}
 		}
 	};
 	
@@ -415,7 +490,6 @@
 		for(var i in values)
 			parent.editAreaLoader.lang[language][i]= values[i];
 	};
-	
 
 	var editArea = new EditArea();	
 	editArea.add_event(window, "load", init);
@@ -423,4 +497,3 @@
 	function init(){		
 		setTimeout("editArea.init();  ", 10);
 	};
-	

@@ -414,7 +414,7 @@
 		var elem= document.getElementById("test_font_size");
 		var dest= document.getElementById(id);
 		var postLeft=0;
-		elem.innerHTML="<pre><span id='test_font_size_inner'>"+lineContent.substr(0, cur_pos).replace(/</g,"&lt;").replace(/&/g,"&amp;")+"</span></pre>";
+		elem.innerHTML="<pre><span id='test_font_size_inner'>"+lineContent.substr(0, cur_pos).replace(/&/g,"&amp;").replace(/</g,"&lt;")+"</span></pre>";
 		posLeft= 45 + document.getElementById('test_font_size_inner').offsetWidth;
 
 		var posTop=this.lineHeight * (start_line-1);

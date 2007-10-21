@@ -134,6 +134,9 @@ var clavier_cds=new Object(146);
 			setTimeout("editArea.check_redo();", 10);
 		}
 		
+		setTimeout("editArea.check_file_changes();", 10);
+		
+		
 		if(use){
 			// in case of a control that sould'nt be used by IE but that is used => THROW a javascript error that will stop key action
 			if(editArea.nav['isIE'])

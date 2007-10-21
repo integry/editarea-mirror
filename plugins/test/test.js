@@ -27,9 +27,9 @@ var EditArea_test= {
 		switch(ctrl_name){
 			case "test_but":
 				// Control id, button img, command
-				return parent.editAreaLoader.get_button_html('test_but', 'test.gif', 'test_cmd', this.baseURL);
+				return parent.editAreaLoader.get_button_html('test_but', 'test.gif', 'test_cmd', false, this.baseURL);
 			case "test_select":
-				html= "<select id='test_select' onchange='javascript:editArea.execCommand(\"test_select_change\")'>"
+				html= "<select id='test_select' onchange='javascript:editArea.execCommand(\"test_select_change\")' fileSpecific='no'>"
 					+"			<option value='-1'>{$test_select}</option>"
 					+"			<option value='h1'>h1</option>"
 					+"			<option value='h2'>h2</option>"

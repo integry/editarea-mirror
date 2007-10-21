@@ -7,7 +7,7 @@
 ******/
 
 	function EditAreaLoader(){
-		this.version= "0.6.7";
+		this.version= "0.7";
 		date= new Date();
 		this.start_time=date.getTime();
 		this.win= "loading";	// window loading state
@@ -37,15 +37,17 @@
 			,toolbar: "search, go_to_line, fullscreen, |, undo, redo, |, select_font,|, change_smooth_selection, highlight, reset_highlight, |, help"
 			,begin_toolbar: ""		//  "new_document, save, load, |"
 			,end_toolbar: ""		// or end_toolbar
+			,is_multi_files: false		// enable the multi file mode (the textarea content is ignored)
 			,allow_resize: "both"	// possible values: "no", "both", "x", "y"
 			,min_width: 400
-			,min_height: 100
+			,min_height: 125
 			,replace_tab_by_spaces: false
 			,allow_toggle: true		// true or false
 			,language: "en"
 			,syntax: ""
+			,syntax_selection_allow: "basic,brainfuck,c,cpp,css,html,js,pas,php,python,sql,vb,xml"
 			,display: "onload" 		// onload or later
-			,max_undo: 20
+			,max_undo: 30
 			,browsers: "known"	// all or known
 			,plugins: "" // comma separated plugin list
 			,gecko_spellcheck: false	// enable/disable by default the gecko_spellcheck
@@ -60,22 +62,25 @@
 			,EA_unload_callback: ""	// EditArea delete while being displayed (function name)
 			,EA_toggle_on_callback: ""	// EditArea toggled on (function name)
 			,EA_toggle_off_callback: ""	// EditArea toggled off (function name)
+			,EA_file_switch_on_callback: ""	// a new tab is selected (called for the newly selected file)
+			,EA_file_switch_off_callback: ""	// a new tab is selected (called for the previously selected file)
+			,EA_file_close_callback: ""		// close a tab
 		};
 		
 		this.advanced_buttons = [
-				// id, button img, command (it will try to find the translation of "id")
-				['new_document', 'newdocument.gif', 'new_document'],
-				['search', 'search.gif', 'show_search'],
-				['go_to_line', 'go_to_line.gif', 'go_to_line'],
-				['undo', 'undo.gif', 'undo'],
-				['redo', 'redo.gif', 'redo'],
-				['change_smooth_selection', 'smooth_selection.gif', 'change_smooth_selection_mode'],
-				['reset_highlight', 'reset_highlight.gif', 'resync_highlight'],
-				['highlight', 'highlight.gif','change_highlight'],
-				['help', 'help.gif', 'show_help'],
-				['save', 'save.gif', 'save'],
-				['load', 'load.gif', 'load'],
-				['fullscreen', 'fullscreen.gif', 'toggle_full_screen']
+				// id, button img, command (it will try to find the translation of "id"), is_file_specific
+				['new_document', 'newdocument.gif', 'new_document', false],
+				['search', 'search.gif', 'show_search', false],
+				['go_to_line', 'go_to_line.gif', 'go_to_line', false],
+				['undo', 'undo.gif', 'undo', true],
+				['redo', 'redo.gif', 'redo', true],
+				['change_smooth_selection', 'smooth_selection.gif', 'change_smooth_selection_mode', true],
+				['reset_highlight', 'reset_highlight.gif', 'resync_highlight', true],
+				['highlight', 'highlight.gif','change_highlight', true],
+				['help', 'help.gif', 'show_help', false],
+				['save', 'save.gif', 'save', false],
+				['load', 'load.gif', 'load', false],
+				['fullscreen', 'fullscreen.gif', 'toggle_full_screen', false]
 			];
 				
 		// navigator identification
@@ -87,13 +92,6 @@
 			this.nav['isIE'] = ua.replace(/^.*?MSIE ([0-9\.]*).*$/, "$1");
 			if(this.nav['isIE']<6)
 				this.has_error(); 
-			/*this.IEvers= this.nav['isIE'].substr(0,1);
-			if(this.IEvers<6)
-				this.has_error();
-			else if(this.IEvers==6)
-				this.nav['isIE']6=true;
-			else if(this.IEvers==7)
-				this.nav['isIE']7= true;*/
 		}
 		if(this.nav['isNS'] = ua.indexOf('Netscape/') != -1){	// work only on netscape > 8 with render mode IE
 			this.nav['isNS']= ua.substr(ua.indexOf('Netscape/')+9);
@@ -118,11 +116,10 @@
 		if(this.nav['isCamino'] =(ua.indexOf('Camino') != -1))
 			this.nav['isCamino'] = ua.replace(/^.*?Camino.*?([0-9\.]+).*$/i, "$1");
 		
-		this.nav['isSafari'] = (ua.indexOf('Safari') != -1);
-	/*	if(this.nav['isSafari'])
-			this.has_error();*/
+		if(this.nav['isSafari'] =(ua.indexOf('Safari') != -1))
+			this.nav['isSafari']= ua.replace(/^.*?Version\/([0-9]+\.[0-9]+).*$/i, "$1");
 		
-		if(this.nav['isIE']>=6 || this.nav['isOpera']>=9 || this.nav['isFirefox'] || this.nav['isCamino'])
+		if(this.nav['isIE']>=6 || this.nav['isOpera']>=9 || this.nav['isFirefox'] || this.nav['isCamino'] || this.nav['isSafari']>=3)
 			this.nav['isValidBrowser']=true;
 		else
 			this.nav['isValidBrowser']=false;
@@ -196,11 +193,11 @@
 		// if an instance of the editor already exists for this textarea => delete the previous one
 		if(editAreas[settings["id"]])
 			editAreaLoader.delete_instance(settings["id"]);
-			
+	
 		// init settings
 		for(var i in this.default_settings){
 			if(typeof(settings[i])=="undefined")
-				settings[i]=this.default_settings[i]
+				settings[i]=this.default_settings[i];
 		}
 		
 		if(settings["browsers"]=="known" && this.nav['isValidBrowser']==false){
@@ -243,10 +240,14 @@
 	
 	// delete an instance of an EditArea
 	EditAreaLoader.prototype.delete_instance= function(id){
+		
 		editAreaLoader.execCommand(id, "EA_delete");
-		if(window.frames["frame_"+id] && editAreas[id]["displayed"]) 
+		if(window.frames["frame_"+id] && window.frames["frame_"+id].editArea)
+		{
+			if(editAreas[id]["displayed"])
+				editAreaLoader.toggle(id, "off");
 			window.frames["frame_"+id].editArea.execCommand("EA_unload");
-		editAreaLoader.toggle(id, "off");
+		}
 
 		// remove toggle infos and debug textarea
 		var span= document.getElementById("EditAreaArroundInfos_"+id);
@@ -611,11 +612,11 @@
 		this.baseURL+="/";	
 	};
 	
-	EditAreaLoader.prototype.get_button_html= function(id, img, exec, baseURL) {
+	EditAreaLoader.prototype.get_button_html= function(id, img, exec, isFileSpecific, baseURL) {
 		if(!baseURL)
 			baseURL= this.baseURL;
 		var cmd = 'editArea.execCommand(\'' + exec + '\')';
-		html= '<a href="javascript:' + cmd + '" onclick="' + cmd + ';return false;" onmousedown="return false;" target="_self">';
+		html= '<a id="a_'+ id +'" href="javascript:' + cmd + '" onclick="' + cmd + ';return false;" onmousedown="return false;" target="_self" fileSpecific="'+ (isFileSpecific?'yes':'no') +'">';
 		html+= '<img id="' + id + '" src="'+ baseURL +'images/' + img + '" title="{$' + id + '}" width="20" height="20" class="editAreaButtonNormal" onmouseover="editArea.switchClass(this,\'editAreaButtonOver\');" onmouseout="editArea.restoreClass(this);" onmousedown="editArea.restoreAndSwitchClass(this,\'editAreaButtonDown\');" /></a>';
 		return html;
 	};
@@ -627,7 +628,7 @@
 			var but = this.advanced_buttons[i];			
 			if (but[0] == button_name)
 			{
-				return this.get_button_html(but[0], but[1], but[2]);
+				return this.get_button_html(but[0], but[1], but[2], but[3]);
 			}	
 		}		
 				
@@ -639,7 +640,7 @@
 		  	case "separator":
 				return '<img src="'+ this.baseURL +'images/spacer.gif" width="1" height="15" class="editAreaSeparatorLine">';
 			case "select_font":
-				html= "<select id='area_font_size' onchange='javascript:editArea.execCommand(\"change_font_size\")'>"
+				html= "<select id='area_font_size' onchange='javascript:editArea.execCommand(\"change_font_size\")' fileSpecific='yes'>"
 					+"			<option value='-1'>{$font_size}</option>"
 					+"			<option value='8'>8 pt</option>"
 					+"			<option value='9'>9 pt</option>"
@@ -648,6 +649,11 @@
 					+"			<option value='12'>12 pt</option>"
 					+"			<option value='14'>14 pt</option>"
 					+"		</select>";
+				return html;
+			case "syntax_selection":
+				var html= "<select id='syntax_selection' onchange='javascript:editArea.execCommand(\"change_syntax\", this.value)' fileSpecific='yes'>";
+				html+="<option value='-1'>{$syntax_selection}</option>";
+				html+="</select>";
 				return html;
 		}
 		
@@ -979,9 +985,42 @@
 			delete this.hidden[id];	
 		}
 	};
-
+	
+	// get the current file datas (for multi file editing mode)
+	EditAreaLoader.prototype.getCurrentFile = function(id){
+		return this.execCommand(id, 'get_file', this.execCommand(id, 'curr_file'));
+	};
+	
+	// get the given file datas (for multi file editing mode)
+	EditAreaLoader.prototype.getFile = function(id, file_id){
+		return this.execCommand(id, 'get_file', file_id);
+	};
+	
+	// get all the openned files datas (for multi file editing mode)
+	EditAreaLoader.prototype.getAllFiles = function(id){
+		return this.execCommand(id, 'get_all_files()');
+	};
+	
+	// open a file (for multi file editing mode)
+	EditAreaLoader.prototype.openFile = function(id, file_infos){
+		return this.execCommand(id, 'open_file', file_infos);
+	};
+	
+	// close the given file (for multi file editing mode)
+	EditAreaLoader.prototype.closeFile = function(id, file_id){
+		return this.execCommand(id, 'close_file', file_id);
+	};
+	
+	// close the given file (for multi file editing mode)
+	EditAreaLoader.prototype.setFileEditedMode = function(id, file_id, to){
+		var reg1= new RegExp('\\\\', 'g');
+		var reg2= new RegExp('"', 'g');
+		return this.execCommand(id, 'set_file_edited_mode("'+ file_id.replace(reg1, '\\\\').replace(reg2, '\\"') +'", '+ to +')');
+	};
+	
+	
 	// allow to access to editarea functions and datas (for advanced users only)
-	EditAreaLoader.prototype.execCommand = function(id, cmd){
+	EditAreaLoader.prototype.execCommand = function(id, cmd, fct_param){
 		switch(cmd){
 			case "EA_init":
 				if(editAreas[id]['settings']["EA_init_callback"].length>0)
@@ -996,12 +1035,14 @@
 					eval(editAreas[id]['settings']["submit_callback"]+"('"+ id +"');");
 				break;
 		}
-        if(window.frames["frame_"+id]){
-            return eval('window.frames["frame_'+ id +'"].editArea.'+ cmd +';');       
+        if(window.frames["frame_"+id] && window.frames["frame_"+ id].editArea){
+			if(fct_param!=undefined)
+				return eval('window.frames["frame_'+ id +'"].editArea.'+ cmd +'(fct_param);');
+			else
+				return eval('window.frames["frame_'+ id +'"].editArea.'+ cmd +';');       
         }
         return false;
     };
-
 	
 	var editAreaLoader= new EditAreaLoader();
 	var editAreas= new Object();

@@ -1,11 +1,14 @@
 	// change_to: "on" or "off"
 	EditArea.prototype.change_highlight= function(change_to){
-		
 		if(this.settings["syntax"].length==0){
 			this.switchClassSticky(document.getElementById("highlight"), 'editAreaButtonDisabled', true);
 			this.switchClassSticky(document.getElementById("reset_highlight"), 'editAreaButtonDisabled', true);
 			return false;
 		}
+		
+		if(this.do_highlight==change_to)
+			return false;
+	
 			
 		if(this.nav['isIE'])
 			this.getIESelection();
@@ -59,21 +62,7 @@
 	};
 
 	EditArea.prototype.enable_highlight= function(){
-		width=document.getElementById("editor").offsetWidth;
-		height=document.getElementById("editor").offsetHeight;
-		if(this.nav['isGecko'] || this.nav['isOpera'] || this.nav['isIE']>=7){
-			width-=2;
-			height-=2;
-		}
-		if(this.textarea.value.length>0){
-			this.should_display_processing_screen=true;
-			document.getElementById("processing").style.display="block";
-			document.getElementById("processing").style.width= width+"px";
-			document.getElementById("processing").style.height= height+"px";
-		}
-		/*var selec=document.getElementById("selection_field");
-		selec.style.visibility="visible";		*/
-			
+		this.show_waiting_screen();
 			
 		this.content_highlight.style.visibility="visible";
 		var new_class=parent.getAttribute(this.textarea,"class")+" hidden";
@@ -98,6 +87,7 @@
 		this.do_highlight=true;
 		this.resync_highlight();
 					
+		this.hide_waiting_screen();
 		//area.onkeyup="";
 		/*if(!displayOnly){
 			this.do_highlight=true;
@@ -284,11 +274,7 @@
 			this.debug.value+=debug_opti;
 		//	this.debug.value+= "highlight\n"+hightlighted_text;
 		}
-	
-		if(this.should_display_processing_screen){
-			this.should_display_processing_screen= false;
-			document.getElementById("processing").style.display="none";
-		}		
+		
 	};
 	
 	EditArea.prototype.resync_highlight= function(reload_now){

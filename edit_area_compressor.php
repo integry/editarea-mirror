@@ -7,9 +7,10 @@
 	 *	v1.1.3 (2007/01/18)	 
 	 *
 	******/
-
+	
 	// CONFIG
 	$param['cache_duration']= 3600 * 24 * 10;		// 10 days util client cache expires
+	$param['compress'] = true;						// enable the code compression, should be activated but it can be usefull to desactivate it for easier error retrieving (true or false)
 	$param['debug'] = false;						// Enable this option if you need debuging info
 	$param['use_disk_cache']= true;					// If you enable this option gzip files will be cached on disk.
 	$param['use_gzip']= true;						// Enable gzip compression
@@ -41,7 +42,6 @@
 				$this->full_cache_file= $this->path."edit_area_full.js";
 				$this->gzip_cache_file= $this->path."edit_area_full.gz";
 			}
-			
 			
 			$this->check_gzip_use();
 			$this->send_headers();
@@ -143,38 +143,33 @@
 			$loader= $this->get_content("edit_area_loader.js")."\n";
 			
 			// get the list of other files to load
-			/*create_function(
-	           				'$matches',
-	           				'global $compressor;
-	           				 $this->script_list.=$matches[2];
-	           				 return $matches[1]."();";'
-	         			)*/
-	        
-			$loader= preg_replace("/(this\.scripts_to_load= new Array)\(([^\)]*)\);/e"
+	    	$loader= preg_replace("/(this\.scripts_to_load= new Array)\(([^\)]*)\);/e"
 						, "\$this->replace_scripts('script_list', '\\1', '\\2')"
 						, $loader);
 		
 			$loader= preg_replace("/(this\.sub_scripts_to_load= new Array)\(([^\)]*)\);/e"
 						, "\$this->replace_scripts('sub_script_list', '\\1', '\\2')"
 						, $loader);
-			
-			
+
 			$this->datas= $loader;
+			$this->compress_javascript($this->datas);
 			
 			// load other scripts needed for the loader
 			preg_match_all('/"([^"]*)"/', $this->script_list, $match);
 			foreach($match[1] as $key => $value)
-				$this->datas.= $this->get_content(preg_replace("/\\|\//i", "", $value).".js")."\n";
-		
-			$this->compress_javascript($this->datas);
+			{
+				$content= $this->get_content(preg_replace("/\\|\//i", "", $value).".js");
+				$this->compress_javascript($content);
+				$this->datas.= $content."\n";
+			}
+			//$this->datas);
 			//$this->datas= preg_replace('/(( |\t|\r)*\n( |\t)*)+/s', "", $this->datas);
-			$this->datas.="\n";
-		
+			
 			// improved compression step 1/2	
 			$this->datas= preg_replace(array("/(\b)EditAreaLoader(\b)/", "/(\b)editAreaLoader(\b)/", "/(\b)editAreas(\b)/"), array("EAL", "eAL", "eAs"), $this->datas);
+			//$this->datas= str_replace(array("EditAreaLoader", "editAreaLoader", "editAreas"), array("EAL", "eAL", "eAs"), $this->datas);
 			$this->datas.= "var editAreaLoader= eAL;var editAreas=eAs;EditAreaLoader=EAL;";
 		
-			
 			// load sub scripts
 			$sub_scripts="";
 			$sub_scripts_list= array();
@@ -182,7 +177,7 @@
 			foreach($match[1] as $value){
 				$sub_scripts_list[]= preg_replace("/\\|\//i", "", $value).".js";
 			}
-			
+		
 			if($this->load_all_plugins){
 				// load plugins scripts
 				$plug_path= $this->path."plugins/";
@@ -198,13 +193,14 @@
 					}
 					closedir($dir);
 				}
-			}						
+			}
+							
 			foreach($sub_scripts_list as $value){
 				$sub_scripts.= $this->get_javascript_content($value);
 			}
-			
 			// improved compression step 2/2	
 			$sub_scripts= preg_replace(array("/(\b)editAreaLoader(\b)/", "/(\b)editAreas(\b)/", "/(\b)editArea(\b)/", "/(\b)EditArea(\b)/"), array("eAL", "eAs", "eA", "EA"), $sub_scripts);
+		//	$sub_scripts= str_replace(array("editAreaLoader", "editAreas", "editArea", "EditArea"), array("eAL", "eAs", "eA", "EA"), $sub_scripts);
 			$sub_scripts.= "var editArea= eA;EditArea=EA;";
 			
 			
@@ -219,7 +215,8 @@
 			// load the css
 			$this->datas.= sprintf("editAreaLoader.iframe_css= \"<style>%s</style>\";\n", $this->get_css_content("edit_area.css"));
 					
-		//	$this->datas= "function editArea(){};editArea.prototype.loader= function(){alert('bouhbouh');} var a= new editArea();a.loader();";		
+		//	$this->datas= "function editArea(){};editArea.prototype.loader= function(){alert('bouhbouh');} var a= new editArea();a.loader();";
+					
 		}
 		
 		function send_datas()
@@ -258,7 +255,7 @@
 			else
 				echo $this->datas;
 				
-			die;
+//			die;
 		}
 				
 		
@@ -290,16 +287,18 @@
 		
 		function compress_javascript(&$code)
 		{
-			// remove all comments
-		
-			//	(\"(?:[^\"\\]*(?:\\\\)*(?:\\\"?)?)*(?:\"|$))|(\'(?:[^\'\\]*(?:\\\\)*(?:\\'?)?)*(?:\'|$))|(?:\/\/(?:.|\r|\t)*?(\n|$))|(?:\/\*(?:.|\n|\r|\t)*?(?:\*\/|$))
-			$code= preg_replace("/(\"(?:[^\"\\\\]*(?:\\\\\\\\)*(?:\\\\\"?)?)*(?:\"|$))|(\'(?:[^\'\\\\]*(?:\\\\\\\\)*(?:\\\\\'?)?)*(?:\'|$))|(?:\/\/(?:.|\r|\t)*?(\n|$))|(?:\/\*(?:.|\n|\r|\t)*?(?:\*\/|$))/s", "$1$2$3", $code);
-			// remove line return, empty line and tabulation
-			$code= preg_replace('/(( |\t|\r)*\n( |\t)*)+/s', " ", $code);
-			// add line break before "else" otherwise navigators can't manage to parse the file
-			$code=preg_replace('/(\b(else)\b)/', "\n$1", $code);
-			// remove unnecessary spaces
-			$code=preg_replace('/( |\t|\r)?(;|\{|\}|=|==)( |\t|\r)+/', "$2", $code);
+			if($this->param['compress'])
+			{
+				// remove all comments
+				//	(\"(?:[^\"\\]*(?:\\\\)*(?:\\\"?)?)*(?:\"|$))|(\'(?:[^\'\\]*(?:\\\\)*(?:\\'?)?)*(?:\'|$))|(?:\/\/(?:.|\r|\t)*?(\n|$))|(?:\/\*(?:.|\n|\r|\t)*?(?:\*\/|$))
+				$code= preg_replace("/(\"(?:[^\"\\\\]*(?:\\\\\\\\)*(?:\\\\\"?)?)*(?:\"|$))|(\'(?:[^\'\\\\]*(?:\\\\\\\\)*(?:\\\\\'?)?)*(?:\'|$))|(?:\/\/(?:.|\r|\t)*?(\n|$))|(?:\/\*(?:.|\n|\r|\t)*?(?:\*\/|$))/s", "$1$2$3", $code);
+				// remove line return, empty line and tabulation
+				$code= preg_replace('/(( |\t|\r)*\n( |\t)*)+/s', " ", $code);
+				// add line break before "else" otherwise navigators can't manage to parse the file
+				$code= preg_replace('/(\b(else)\b)/', "\n$1", $code);
+				// remove unnecessary spaces
+				$code= preg_replace('/( |\t|\r)?(;|\{|\}|=|==)( |\t|\r)+/', "$2", $code);
+			}
 		}
 		
 		function get_css_content($end_uri){
@@ -326,7 +325,10 @@
 			/*$pattern= array("/(\\\\)?\"/", '/\\\n/'	, '/\\\r/'	, "/(\r?\n)/");
 			$replace= array('$1$1\\"', '\\\\\\n', '\\\\\\r'	, '\\\n"$1+"');*/
 			$pattern= array("/(\\\\)?\"/", '/\\\n/'	, '/\\\r/'	, "/(\r?\n)/");
-			$replace= array('$1$1\\"', '\\\\\\n', '\\\\\\r'	, '\n');
+			if($this->param['compress'])
+				$replace= array('$1$1\\"', '\\\\\\n', '\\\\\\r'	, '\n');
+			else
+				$replace= array('$1$1\\"', '\\\\\\n', '\\\\\\r'	, "\\n\"\n+\"");
 			$str= preg_replace($pattern, $replace, $str);
 		}
 		

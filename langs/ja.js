@@ -1,4 +1,4 @@
-﻿editAreaLoader.lang["ja"]={
+editAreaLoader.lang["ja"]={
 new_document: "新規作成",
 search_button: "検索・置換",
 search_command: "次を検索 / 検索窓を表示",
@@ -41,5 +41,20 @@ shift: "Shift",
 ctrl: "Ctrl",
 esc: "Esc",
 processing: "処理中です...",
-fullscreen: "fullscreen"
+fullscreen: "fullscreen",
+syntax_selection: "--Syntax--",
+syntax_css: "CSS",
+syntax_html: "HTML",
+syntax_js: "Javascript",
+syntax_php: "Php",
+syntax_python: "Python",
+syntax_vb: "Visual Basic",
+syntax_xml: "Xml",
+syntax_c: "C",
+syntax_cpp: "CPP",
+syntax_basic: "Basic",
+syntax_pas: "Pascal",
+syntax_brainfuck: "Brainfuck",
+syntax_sql: "SQL",
+close_tab: "Close file"
 };

@@ -39,7 +39,7 @@ var EditArea_charmap= {
 		switch(ctrl_name){
 			case "charmap":
 				// Control id, button img, command
-				return parent.editAreaLoader.get_button_html('charmap_but', 'charmap.gif', 'charmap_press', this.baseURL);
+				return parent.editAreaLoader.get_button_html('charmap_but', 'charmap.gif', 'charmap_press', false, this.baseURL);
 		}
 		return false;
 	}
