@@ -2,12 +2,12 @@
  *
  *	EditArea 
  * 	Developped by Christophe Dolivet
- *	Released under LGPL license
+ *	Released under LGPL and Apache licenses
  *
 ******/
 
 	function EditAreaLoader(){
-		this.version= "0.7";
+		this.version= "0.7.1";
 		date= new Date();
 		this.start_time=date.getTime();
 		this.win= "loading";	// window loading state
@@ -45,13 +45,14 @@
 			,allow_toggle: true		// true or false
 			,language: "en"
 			,syntax: ""
-			,syntax_selection_allow: "basic,brainfuck,c,cpp,css,html,js,pas,php,python,sql,vb,xml"
+			,syntax_selection_allow: "basic,brainfuck,c,cpp,css,html,js,pas,php,python,ruby,sql,vb,xml"
 			,display: "onload" 		// onload or later
 			,max_undo: 30
 			,browsers: "known"	// all or known
 			,plugins: "" // comma separated plugin list
 			,gecko_spellcheck: false	// enable/disable by default the gecko_spellcheck
 			,fullscreen: false
+			,is_editable: true
 			,load_callback: ""		// click on load button (function name)
 			,save_callback: ""		// click on save button (function name)
 			,change_callback: ""	// textarea onchange trigger (function name)
@@ -87,6 +88,9 @@
 		ua= navigator.userAgent;
 		
 		this.nav= new Object(); 
+		
+		this.nav['isMacOS'] = (ua.indexOf('Mac OS') != -1);
+		
 		this.nav['isIE'] = (navigator.appName == "Microsoft Internet Explorer");
 		if(this.nav['isIE']){
 			this.nav['isIE'] = ua.replace(/^.*?MSIE ([0-9\.]*).*$/, "$1");
@@ -172,15 +176,17 @@
 	// init the checkup of the selection of the IE textarea
 	EditAreaLoader.prototype.init_ie_textarea= function(id){
 		textarea=document.getElementById(id);
-		if(textarea && typeof(textarea.focused)=="undefined"){
-			textarea.focus();
-			textarea.focused=true;
-			textarea.selectionStart= textarea.selectionEnd= 0;			
-			get_IE_selection(textarea);
-			editAreaLoader.add_event(textarea, "focus", IE_textarea_focus);
-			editAreaLoader.add_event(textarea, "blur", IE_textarea_blur);
-			
-		}
+		try{
+			if(textarea && typeof(textarea.focused)=="undefined"){
+				textarea.focus();
+				textarea.focused=true;
+				textarea.selectionStart= textarea.selectionEnd= 0;			
+				get_IE_selection(textarea);
+				editAreaLoader.add_event(textarea, "focus", IE_textarea_focus);
+				editAreaLoader.add_event(textarea, "blur", IE_textarea_blur);
+				
+			}
+		}catch(ex){}
 	};
 		
 	EditAreaLoader.prototype.init= function(settings){
@@ -280,7 +286,7 @@
 		
 		// check that all needed scripts are loaded
 		for(var i in editAreaLoader.waiting_loading){
-			if(editAreaLoader.waiting_loading[i]!="loaded"){
+			if(editAreaLoader.waiting_loading[i]!="loaded" && typeof(editAreaLoader.waiting_loading[i])!="function"){
 				setTimeout("editAreaLoader.start('"+id+"');", 50);
 				return;
 			}
@@ -386,6 +392,9 @@
 		area.textarea=document.getElementById(area["settings"]["id"]);
 		editAreas[area["settings"]["id"]]["textarea"]=area.textarea;
 	
+		// if removing previous instances from DOM before (fix from Marcin)
+		if(typeof(window.frames["frame_"+area["settings"]["id"]])!='undefined') 
+			delete window.frames["frame_"+area["settings"]["id"]];
 		
 		// insert template in the document after the textarea
 		var father= area.textarea.parentNode;
@@ -715,10 +724,11 @@
 			var script= document.createElement("script");
 			script.type= "text/javascript";
 			script.src= url;
+			script.charset= "UTF-8";
 			var head= document.getElementsByTagName("head");
 			head[0].appendChild(script);
 		}catch(e){
-			document.write('<sc'+'ript language="javascript" type="text/javascript" src="' + url + '"></sc'+'ript>');
+			document.write('<sc'+'ript language="javascript" type="text/javascript" src="' + url + '" charset="UTF-8"></sc'+'ript>');
 		}
 		//var filename= url.replace(/^.*?\/?([a-z\.\_\-]+)$/i, "$1");
 		this.loadedFiles[url] = true;
@@ -742,8 +752,10 @@
 
 	// reset all the editareas in the form that have been reseted
 	EditAreaLoader.prototype.reset= function(e){
-		
 		var formObj = editAreaLoader.nav['isIE'] ? window.event.srcElement : e.target;
+		if(formObj.tagName!='FORM')
+			formObj= formObj.form;
+		
 		for(var i in editAreas){			
 			var is_child= false;
 			for (var x=0;x<formObj.elements.length;x++) {
@@ -767,7 +779,9 @@
 	// prepare all the textarea replaced by an editarea to be submited
 	EditAreaLoader.prototype.submit= function(e){		
 		var formObj = editAreaLoader.nav['isIE'] ? window.event.srcElement : e.target;
-
+		if(formObj.tagName!='FORM')
+			formObj= formObj.form;
+		
 		for(var i in editAreas){
 			var is_child= false;
 			for (var x=0;x<formObj.elements.length;x++) {

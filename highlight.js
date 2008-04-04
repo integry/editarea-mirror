@@ -1,6 +1,6 @@
 	// change_to: "on" or "off"
 	EditArea.prototype.change_highlight= function(change_to){
-		if(this.settings["syntax"].length==0){
+		if(this.settings["syntax"].length==0 && change_to==false){
 			this.switchClassSticky(document.getElementById("highlight"), 'editAreaButtonDisabled', true);
 			this.switchClassSticky(document.getElementById("reset_highlight"), 'editAreaButtonDisabled', true);
 			return false;
@@ -48,7 +48,7 @@
 		//setAttribute(icon, "class", getAttribute(icon, "class").replace(/ selected/g, "") );
 		//this.restoreClass(icon);
 		//this.switchClass(icon,'editAreaButtonNormal');
-		this.switchClassSticky(document.getElementById("highlight"), 'editAreaButtonNormal', false);
+		this.switchClassSticky(document.getElementById("highlight"), 'editAreaButtonNormal', true);
 		this.switchClassSticky(document.getElementById("reset_highlight"), 'editAreaButtonDisabled', true);
 	
 		this.do_highlight=false;

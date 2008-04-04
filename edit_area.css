@@ -50,8 +50,9 @@ body, html, table, form, textarea{
 	overflow: hidden;  
 	z-index: 7; 
 	border: solid green 0px;
+	background-color: transparent;
 /*	background: none;
-	background-color: transparent;*/
+	*/
 }
 
 #textarea, #textarea:hover{
@@ -435,4 +436,16 @@ table.statusbar{
 	display: none;
 	z-index: 20;
 	position: absolute;
+}
+
+
+/*** Non-editable mode ***/
+.non_editable #editor
+{
+	border-width: 0 1px;
+}
+
+.non_editable .area_toolbar
+{
+	display: none;
 }

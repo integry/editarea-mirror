@@ -46,6 +46,8 @@ var clavier_cds=new Object(146);
 			e=event;
 		}
 		
+		
+		
 		// send the event to the plugins
 		for(var i in editArea.plugins){
 			if(typeof(editArea.plugins[i].onkeydown)=="function"){
@@ -66,14 +68,23 @@ var clavier_cds=new Object(146);
 		
 		var low_letter= letter.toLowerCase();
 				
-		if(letter=="Tabulation" && target_id=="textarea" && !CtrlPressed(e) && !AltPressed(e)){	
+		if(letter=="Page up" && !editArea.nav['isOpera']){
+			editArea.execCommand("scroll_page", {"dir": "up", "shift": ShiftPressed(e)});
+			use=true;
+		}else if(letter=="Page down" && !editArea.nav['isOpera']){
+			editArea.execCommand("scroll_page", {"dir": "down", "shift": ShiftPressed(e)});
+			use=true;
+		}else if(editArea.is_editable==false){
+			// do nothing but also do nothing else (allow to navigate with page up and page down)
+			return true;
+		}else if(letter=="Tabulation" && target_id=="textarea" && !CtrlPressed(e) && !AltPressed(e)){	
 			if(ShiftPressed(e))
 				editArea.execCommand("invert_tab_selection");
 			else
 				editArea.execCommand("tab_selection");
 			
 			use=true;
-			if(editArea.nav['isOpera'])	// opera can't cancel tabulation events...
+			if(editArea.nav['isOpera'] || (editArea.nav['isFirefox'] && editArea.nav['isMacOS']) )	// opera && firefox mac can't cancel tabulation events...
 				setTimeout("editArea.execCommand('focus');", 1);
 		}else if(letter=="Entrer" && target_id=="textarea"){
 			if(editArea.press_enter())
@@ -81,13 +92,7 @@ var clavier_cds=new Object(146);
 		}else if(letter=="Entrer" && target_id=="area_search"){
 			editArea.execCommand("area_search");
 			use=true;
-		}else if(letter=="Page up" && !editArea.nav['isOpera']){
-			editArea.execCommand("scroll_page", {"dir": "up", "shift": ShiftPressed(e)});
-			use=true;
-		}else if(letter=="Page down" && !editArea.nav['isOpera']){
-			editArea.execCommand("scroll_page", {"dir": "down", "shift": ShiftPressed(e)});
-			use=true;
-		}else if(letter=="Esc"){
+		}else  if(letter=="Esc"){
 			editArea.execCommand("close_all_inline_popup", e);
 			use=true;
 		}else if(CtrlPressed(e) && !AltPressed(e) && !ShiftPressed(e)){

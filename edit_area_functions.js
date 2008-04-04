@@ -689,6 +689,13 @@
 					}
 				}
 				
+			/*	if(this.settings['syntax'].length==0)
+				{
+					this.switchClassSticky(document.getElementById("highlight"), 'editAreaButtonNormal', false);
+					this.switchClassSticky(document.getElementById("reset_highlight"), 'editAreaButtonNormal', false);
+					this.change_highlight(true);
+				}
+				*/
 				this.settings['syntax']= new_syntax;
 				this.resync_highlight(true);
 				this.hide_waiting_screen();
@@ -696,6 +703,26 @@
 			}
 		}
 		return false;
+	};
+	
+	
+	// check if the file has changed
+	EditArea.prototype.set_editable= function(is_editable){
+		if(is_editable)
+		{
+			document.body.className= "";
+			this.textarea.readOnly= false;
+			this.is_editable= true;
+		}
+		else
+		{
+			document.body.className= "non_editable";
+			this.textarea.readOnly= true;
+			this.is_editable= false;
+		}
+		
+		if(editAreas[this.id]["displayed"]==true)
+			this.update_size();
 	};
 	
 	/***** tabbed files managing functions *****/
@@ -770,38 +797,37 @@
 		{
 			this.save_file(id);
 			
-			// remove the tab in the toolbar
-			var li= document.getElementById(this.files[id]['html_id']);
-			li.parentNode.removeChild(li);
-			// select a new file
-			if(id== this.curr_file)
-			{
-				var next_file= "";
-				var is_next= false;
-				for(var i in this.files)
-				{
-					if(is_next)
-					{
-						next_file= i;
-						break;
-					}
-					else if(i==id)
-						is_next= true;
-					else
-						next_file= i;
-				}
-				// display the next file
-				this.switch_to_file(next_file);
-			}
-				
 			// close file callback
-			this.execCommand('file_close', this.files[id]);
-			
-			// clear datas
-			delete (this.files[id]);
-			this.update_size();
+			if(this.execCommand('file_close', this.files[id])!==false)
+			{
+				// remove the tab in the toolbar
+				var li= document.getElementById(this.files[id]['html_id']);
+				li.parentNode.removeChild(li);
+				// select a new file
+				if(id== this.curr_file)
+				{
+					var next_file= "";
+					var is_next= false;
+					for(var i in this.files)
+					{
+						if(is_next)
+						{
+							next_file= i;
+							break;
+						}
+						else if(i==id)
+							is_next= true;
+						else
+							next_file= i;
+					}
+					// display the next file
+					this.switch_to_file(next_file);
+				}
+				// clear datas
+				delete (this.files[id]);
+				this.update_size();
+			}	
 		}
-		
 	};
 	
 	// backup current file datas
@@ -882,7 +908,7 @@
 		else
 		{
 			this.result.className= "";
-			this.textarea.readOnly= false;
+			this.textarea.readOnly= !this.is_editable;
 			document.getElementById("no_file_selected").style.display= "none";
 			this.tab_browsing_area.style.display= "block";
 		}

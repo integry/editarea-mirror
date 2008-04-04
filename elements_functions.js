@@ -321,14 +321,16 @@
 	
 	// select the text for IE (take into account the \r difference)
 	function set_IE_selection(textarea){
-		var nbLineStart=textarea.value.substr(0, textarea.selectionStart).split("\n").length - 1;
-		var nbLineEnd=textarea.value.substr(0, textarea.selectionEnd).split("\n").length - 1;
-		var range = document.selection.createRange();
-		range.moveToElementText( textarea );
-		range.setEndPoint( 'EndToStart', range );
-		range.moveStart('character', textarea.selectionStart - nbLineStart);
-		range.moveEnd('character', textarea.selectionEnd - nbLineEnd - (textarea.selectionStart - nbLineStart)  );
-		range.select();
+		if(!window.closed){ 
+			var nbLineStart=textarea.value.substr(0, textarea.selectionStart).split("\n").length - 1;
+			var nbLineEnd=textarea.value.substr(0, textarea.selectionEnd).split("\n").length - 1;
+			var range = document.selection.createRange();
+			range.moveToElementText( textarea );
+			range.setEndPoint( 'EndToStart', range );
+			range.moveStart('character', textarea.selectionStart - nbLineStart);
+			range.moveEnd('character', textarea.selectionEnd - nbLineEnd - (textarea.selectionStart - nbLineStart)  );
+			range.select();
+		}
 	};
 	
 	

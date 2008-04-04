@@ -2,7 +2,7 @@
  *
  *	EditArea 
  * 	Developped by Christophe Dolivet
- *	Released under LGPL license
+ *	Released under LGPL and Apache licenses
  *
 ******/
 
@@ -40,7 +40,7 @@
 		for(var index in this.assocBracket){
 			this.revertAssocBracket[this.assocBracket[index]]=index;
 		}
-		
+		this.is_editable= true;
 		
 		
 		/*this.textarea="";	
@@ -81,6 +81,8 @@
 		
 		if(this.settings['syntax'])
 			this.allready_used_syntax[this.settings['syntax']]=true;
+		
+		
 	};
 	
 	
@@ -129,6 +131,9 @@
 		this.editor_area= document.getElementById("editor");
 		this.tab_browsing_area= document.getElementById("tab_browsing_area");
 		
+		if(!this.settings['is_editable'])
+			this.set_editable(false);
+		
 		if(syntax_selec= document.getElementById("syntax_selection"))
 		{
 			// set up syntax selection lsit in the toolbar
@@ -165,7 +170,6 @@
 				}
 			}
 		}
-		
 		
 		
 		// init datas
@@ -276,6 +280,7 @@
 		parent.editAreaLoader.add_event(parent.window, "resize", editArea.update_size);
 		parent.editAreaLoader.add_event(top.window, "resize", editArea.update_size);
 		parent.editAreaLoader.add_event(window, "unload", function(){if(editAreas[editArea.id] && editAreas[editArea.id]["displayed"]) editArea.execCommand("EA_unload");});
+		
 		
 		/*date= new Date();
 		alert(date.getTime()- parent.editAreaLoader.start_time);*/
@@ -425,7 +430,7 @@
 				break;
 			case "file_close":
 				if(this.settings["EA_file_close_callback"].length>0)
-					eval("parent."+this.settings["EA_file_close_callback"]+"(param);");
+					return eval("parent."+this.settings["EA_file_close_callback"]+"(param);");
 				break;
 			
 			default:
@@ -476,10 +481,11 @@
 			script = document.createElement("script");
 			script.type = "text/javascript";
 			script.src  = url;
+			script.charset= "UTF-8";
 			head = document.getElementsByTagName("head");
 			head[0].appendChild(script);
 		}catch(e){
-			document.write("<script type='text/javascript' src='" + url + "'><"+"/script>");
+			document.write("<script type='text/javascript' src='" + url + "' charset=\"UTF-8\"><"+"/script>");
 		}
 	};
 	

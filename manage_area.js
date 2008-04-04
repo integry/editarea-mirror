@@ -13,15 +13,15 @@
 		if(!editAreas[this.id])
 			return false;
 		
-		time=new Date;
-		t1=t2=t3= time.getTime();
+		//time=new Date;
+		//t1=t2=t3= time.getTime();
 		
 		if(!this.smooth_selection && !this.do_highlight){
 			//formatArea();
 		}else if(this.textareaFocused && editAreas[this.id]["displayed"]==true && this.isResizing==false){
 			infos= this.get_selection_infos();
-			time=new Date;
-			t2= time.getTime();
+		//	time=new Date;
+		//	t2= time.getTime();
 			
 			//if(this.last_selection["line_start"] != infos["line_start"] || this.last_selection["line_nb"] != infos["line_nb"] || infos["full_text"] != this.last_selection["full_text"]){
 			if(this.last_selection["line_start"] != infos["line_start"] || this.last_selection["line_nb"] != infos["line_nb"] || infos["full_text"] != this.last_selection["full_text"] || this.reload_highlight){
@@ -61,8 +61,8 @@
 						this.maj_highlight(infos);
 				}		
 			}
-			time=new Date;
-			t3= time.getTime();
+		//	time=new Date;
+		//	t3= time.getTime();
 			
 			// manage bracket finding
 			if(infos["line_start"] != this.last_selection["line_start"] || infos["curr_pos"] != this.last_selection["curr_pos"] || infos["full_text"].length!=this.last_selection["full_text"].length || this.reload_highlight){
@@ -93,8 +93,8 @@
 			}
 			this.last_selection=infos;
 		}
-		time=new Date;
-		tend= time.getTime();
+	//	time=new Date;
+	//	tend= time.getTime();
 		//this.debug.value="tps total: "+ (tend-t1) + " tps get_infos: "+ (t2-t1)+ " tps jaune: "+ (t3-t2) +" tps cursor: "+ (tend-t3)+" "+typeof(infos);
 		
 		if(timer_checkup){

@@ -3,7 +3,7 @@
 	 *
 	 *	EditArea PHP compressor
 	 * 	Developped by Christophe Dolivet
-	 *	Released under LGPL license
+	 *	Released under LGPL and Apache licenses
 	 *	v1.1.3 (2007/01/18)	 
 	 *
 	******/
