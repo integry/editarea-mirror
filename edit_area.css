@@ -4,7 +4,7 @@ body, html{
 	height: 100%;
 	border: none;
 	overflow: hidden;
-	background-color: #FFFFFF;
+	background-color: #FFF;
 }
 
 body, html, table, form, textarea{
@@ -12,7 +12,7 @@ body, html, table, form, textarea{
 }
 
 #editor{
-	border: solid #888888 1px;
+	border: solid #888 1px;
 	overflow: visible;
  /*	position: absolute;*/
 }
@@ -20,8 +20,8 @@ body, html, table, form, textarea{
 #result{
 	z-index: 4; 
 	overflow: auto;
-	border-top: solid #888888 1px;
-	border-bottom: solid #888888 1px;
+	border-top: solid #888 1px;
+	border-bottom: solid #888 1px;
 	position: relative;
 	clear: both;
 }
@@ -32,24 +32,24 @@ body, html, table, form, textarea{
 
 #container{
 	overflow: hidden;
-	border: solid blue 0px;
+	border: solid blue 0;
 	position: relative; 
 	z-index: 10;
-	padding: 0 5px 0px 0;
+	padding: 0 5px 0 0;
 	/*padding-right: 5px;*/ 
 }
 
 #textarea{
 	position: relative; 
-	top: 0px; 
-	left: 0px;
-	padding: 0px 0px 0px 45px;
+	top: 0; 
+	left: 0;
+	padding: 0 0 0 45px;
 	width: 100%;
 	height: 100%; 
 	/*position: absolute;*/
 	overflow: hidden;  
 	z-index: 7; 
-	border: solid green 0px;
+	border: solid green 0;
 	background-color: transparent;
 /*	background: none;
 	*/
@@ -62,24 +62,34 @@ body, html, table, form, textarea{
 #content_highlight{
 	white-space: pre;
 	/*background-color: #FFFFFF;*/
-	padding: 1px 0 0 45px; 
+	margin: 0 0 0 45px;
+	padding: 1px 0 0 0;
 	position : absolute; 
 	z-index: 4; 
 	overflow: visible; 
-	border: solid yellow 0px;
+	border: solid yellow 0;
 }
 
 
 #selection_field{
-	padding: 0px 0px 0 45px; 
+	margin: 1px 0 0 45px; 
 	background-color: #E1F2F9; 
 	height: 1px;  
 	position: absolute;
 	z-index: 5;
 	top: -100px;
-	margin: 1px 0 0 0px;
+	padding: 0;
 	white-space: pre;
 	overflow: hidden;
+}
+
+#container.wrap_text #content_highlight, #container.wrap_text #selection_field{
+	white-space: pre-wrap;       /* css-3 */
+	white-space: -moz-pre-wrap !important;  /* Mozilla, since 1999 */
+	white-space: -pre-wrap;      /* Opera 4-6 */
+	white-space: -o-pre-wrap;    /* Opera 7 */
+	word-wrap: break-word;       /* Internet Explorer 5.5+ */
+	width: 99%;
 }
 
 #line_number{
@@ -116,7 +126,7 @@ pre{
 	z-index:6; 
 	background-color: #FF6633;
 	top: -100px;
-	margin: 1px 0 0 0px;
+	margin: 1px 0 0 0;
 }
 
 #result .edit_area_selection_field .overline{
@@ -148,13 +158,13 @@ pre{
 .editarea_popup .close_popup{
 	float: right; 
 	line-height: 16px; 
-	border: 0px; 
-	padding: 0px;
+	border: 0; 
+	padding: 0;
 }
 
 .editarea_popup h1,.editarea_popup h2,.editarea_popup h3,.editarea_popup h4,.editarea_popup h5,.editarea_popup h6{
-	margin: 0px;
-	padding: 0px;
+	margin: 0;
+	padding: 0;
 }
 
 .editarea_popup .copyright{
@@ -167,7 +177,7 @@ div#area_search_replace{
 }
 
 div#area_search_replace img{
-	border: 0px;
+	border: 0;
 }
 
 div#area_search_replace div.button{
@@ -192,7 +202,7 @@ div#area_search_replace a:hover{
 
 div#area_search_replace  #move_area_search_replace{
 	cursor: move; 
-	border: solid 1px #888888;
+	border: solid 1px #888;
 }
 
 div#area_search_replace  #close_area_search_replace{
@@ -204,7 +214,7 @@ div#area_search_replace  #close_area_search_replace{
 div#area_search_replace  #area_search_msg{
 	height: 18px; 
 	overflow: hidden; 
-	border-top: solid 1px #888888; 
+	border-top: solid 1px #888; 
 	margin-top: 3px;
 }
 
@@ -222,8 +232,8 @@ div#area_search_replace  #area_search_msg{
 	/*font: 11px sans-serif;*/
 	width: 100%; 
 	/*height: 21px; */
-	margin: 0px; 
-	padding: 0px;
+	margin: 0; 
+	padding: 0;
 	background-color: #ECE9D8;
 	text-align: center;
 }
@@ -233,13 +243,13 @@ div#area_search_replace  #area_search_msg{
 }
 
 .area_toolbar img{
-	border: 0px;
+	border: 0;
 	vertical-align: middle;
 }
 
 .area_toolbar input{
-	margin: 0px;
-	padding: 0px;
+	margin: 0;
+	padding: 0;
 }
 
 .area_toolbar select{
@@ -259,7 +269,7 @@ table.statusbar{
 .area_toolbar td.infos{
 	text-align: center;
 	width: 130px;
-	border-right: solid 1px #888888;
+	border-right: solid 1px #888;
 	border-width: 0 1px 0 0;
 	padding: 0;
 }
@@ -287,10 +297,10 @@ table.statusbar{
 
 /* toolbar buttons */
 .editAreaButtonNormal, .editAreaButtonOver, .editAreaButtonDown, .editAreaSeparator, .editAreaSeparatorLine, .editAreaButtonDisabled, .editAreaButtonSelected {
-	border: 0px; margin: 0px; padding: 0px; background: transparent;
-	margin-top: 0px;
+	border: 0; margin: 0; padding: 0; background: transparent;
+	margin-top: 0;
 	margin-left: 1px;
-	padding: 0px;
+	padding: 0;
 }
 
 .editAreaButtonNormal {
@@ -335,7 +345,7 @@ table.statusbar{
 #processing{
 	display: none; 
 	background-color:#ECE9D8; 
-	border: solid #888888 1px;
+	border: solid #888 1px;
 	position: absolute; 
 	top: 0; 
 	left: 0;
@@ -362,9 +372,9 @@ table.statusbar{
 #tab_browsing_area{
 	display: none;
 	background-color: #CCC9A8;
-	border-top: 1px solid #888888;
+	border-top: 1px solid #888;
 	text-align: left;
-	margin: 0px;
+	margin: 0;
 }
 
 #tab_browsing_list {
@@ -390,8 +400,8 @@ table.statusbar{
 	display: block; 
 	color: #000; 
 	background: #ECE9D8; 
-	border:	1px solid #888888; 
-	border-width: 1px 1px 0px; 
+	border:	1px solid #888; 
+	border-width: 1px 1px 0; 
 	text-align: center; 
 	padding: 2px 2px 1px 4px; 
 	position: relative;	/*IE 6 hack */
