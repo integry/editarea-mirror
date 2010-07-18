@@ -118,7 +118,8 @@
 				option.value= syntax;
 				if(syntax==s['syntax'])
 					option.selected= "selected";
-				option.innerHTML= t.get_translation("syntax_" + syntax, "word");
+				dispSyntax	= parent.editAreaLoader.syntax_display_name[ syntax ];
+				option.innerHTML= typeof( dispSyntax ) == 'undefined' ? syntax.substring( 0, 1 ).toUpperCase() + syntax.substring( 1 ) : dispSyntax;//t.get_translation("syntax_" + syntax, "word");
 				syntax_selec.appendChild(option);
 			}
 		}
@@ -170,15 +171,15 @@
 	
 		// init key events
 		if(t.isOpera)
-			_$("editor").onkeypress= keyDown;
+			_$("editor").onkeypress	= keyDown;
 		else
-			_$("editor").onkeydown= keyDown;
+			_$("editor").onkeydown	= keyDown;
 
 		for(var i=0; i<t.inlinePopup.length; i++){
-			if(t.isIE || t.isFirefox)
-				_$(t.inlinePopup[i]["popup_id"]).onkeydown= keyDown;
+			if(t.isOpera)
+				_$(t.inlinePopup[i]["popup_id"]).onkeypress	= keyDown;
 			else
-				_$(t.inlinePopup[i]["popup_id"]).onkeypress= keyDown;
+				_$(t.inlinePopup[i]["popup_id"]).onkeydown	= keyDown;
 		}
 		
 		if(s["allow_resize"]=="both" || s["allow_resize"]=="x" || s["allow_resize"]=="y")
@@ -231,12 +232,6 @@
 				a.style.marginTop	="1px";
 		}
 		
-		if( t.isChrome ){
-			t.editor_area.style.position	= "absolute";
-			a.style.marginLeft	="0px";
-			a.style.marginTop	="0px";
-		}
-		
 		// si le textarea n'est pas grand, un click sous le textarea doit provoquer un focus sur le textarea
 		parent.editAreaLoader.add_event(t.result, "click", function(e){ if((e.target || e.srcElement)==editArea.result) { editArea.area_select(editArea.textarea.value.length, 0);}  });
 		
@@ -262,8 +257,12 @@
 		parent.editAreaLoader.add_event(parent.window, "resize", editArea.update_size);
 		parent.editAreaLoader.add_event(top.window, "resize", editArea.update_size);
 		parent.editAreaLoader.add_event(window, "unload", function(){
-			parent.editAreaLoader.remove_event(parent.window, "resize", editArea.update_size);
-	  		parent.editAreaLoader.remove_event(top.window, "resize", editArea.update_size);
+			// in case where editAreaLoader have been already cleaned
+			if( parent.editAreaLoader )
+			{
+				parent.editAreaLoader.remove_event(parent.window, "resize", editArea.update_size);
+		  		parent.editAreaLoader.remove_event(top.window, "resize", editArea.update_size);
+			}
 			if(editAreas[editArea.id] && editAreas[editArea.id]["displayed"]){
 				editArea.execCommand("EA_unload");
 			}
@@ -383,8 +382,9 @@
 					this.line_number++;
 				}
 				destDiv.innerHTML= destDiv.innerHTML + newLines;
-				
-				this.fixLinesHeight( this.textarea.value, start, -1 );
+				if(this.settings['word_wrap']){
+					this.fixLinesHeight( this.textarea.value, start, -1 );
+				}
 			}
 		
 			//4) be sure the text is well displayed
